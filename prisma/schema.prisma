@@ -1,0 +1,120 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// Cultivos (Huerto)
+model Crop {
+  id          Int       @id @default(autoincrement())
+  name        String
+  variety     String?
+  status      String    // "Planted", "Harvested", "Failed"
+  plantedAt   DateTime  @default(now())
+  harvestDate DateTime?
+  location    String?   // "La Finquina"
+  bed         String?   // "Bancal 1", "Invernadero"
+  row         String?   // "Fila A", "Línea 2"
+  imageUrl    String?   // Foto de referencia (ej: de internet o la primera del usuario)
+  latitude    Float?
+  longitude   Float?
+  notes       String?
+  logs        CropLog[]
+  tasks       Task[]
+}
+
+// Diario de Cultivo (Fotos + Notas)
+model CropLog {
+  id         Int      @id @default(autoincrement())
+  cropId     Int
+  crop       Crop     @relation(fields: [cropId], references: [id])
+  date       DateTime @default(now())
+  createdAt  DateTime @default(now())
+  imageUrl   String?
+  note       String?
+  aiAnalysis String? // Resultado del análisis de la IA
+}
+
+// Árboles Frutales
+model Tree {
+  id          Int       @id @default(autoincrement())
+  name        String    // "Manzano Reineta"
+  plantedYear Int?
+  location    String?   // Coordenadas o descripción
+  latitude    Float?
+  longitude   Float?
+  health      String?   // "Sano", "Pulgón", etc.
+  notes       String?
+  logs        TreeLog[]
+}
+
+model WeatherLog {
+  id            Int      @id @default(autoincrement())
+  date          DateTime @unique @default(now())
+  precipitation Float    // mm of rain
+  humidity      Float?   // average humidity
+  tempMax       Float?
+  tempMin       Float?
+}
+
+model TreeLog {
+  id        Int      @id @default(autoincrement())
+  treeId    Int
+  tree      Tree     @relation(fields: [treeId], references: [id])
+  date      DateTime @default(now())
+  imageUrl  String?
+  note      String?
+}
+
+// Tareas y Mantenimiento (General + Vinculado)
+model Task {
+  id          Int      @id @default(autoincrement())
+  title       String
+  description String?
+  status      String   // "Pending", "Done"
+  dueDate     DateTime?
+  periodicity String?  // "Weekly", "Monthly", etc.
+  category    String   // "Garden", "Infrastructure", "Machinery"
+  priority    String?  // "High", "Normal", "Low"
+  
+  // Relaciones opcionales
+  cropId      Int?
+  crop        Crop?    @relation(fields: [cropId], references: [id])
+}
+
+// Finanzas
+model Expense {
+  id          Int      @id @default(autoincrement())
+  item        String
+  amount      Float
+  category    String   // "Tools", "Seeds", "Fertilizer"
+  date        DateTime @default(now())
+  shop        String?
+}
+
+// Inventario de Recursos
+model Resource {
+  id          Int      @id @default(autoincrement())
+  name        String
+  category    String   // "Seeds", "Fertilizer", "Tools"
+  quantity    Float
+  unit        String   // "gr", "kg", "units", "liters"
+  minStock    Float    @default(0) // Alerta de stock bajo
+  updatedAt   DateTime @updatedAt
+}
+
+// Maker Hub (Modelos 3D y Gadgets)
+model MakerModel {
+  id          Int      @id @default(autoincrement())
+  title       String
+  description String?
+  fileUrl     String?  // Link a STL o archivo
+  imageUrl    String?
+  category    String   // "Tags", "Sensors", "GardenTools"
+  createdAt   DateTime @default(now())
+}
