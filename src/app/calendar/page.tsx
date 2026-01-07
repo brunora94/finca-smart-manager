@@ -3,6 +3,8 @@ import { getHarvestCalendarData } from "./actions"
 import { Calendar as CalendarIcon, Leaf, Clock, Camera } from "lucide-react"
 import Link from "next/link"
 
+export const dynamic = 'force-dynamic';
+
 // Helper to group by month
 function groupByMonth(events: any[]) {
     const groups: { [key: string]: any[] } = {};
