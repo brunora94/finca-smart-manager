@@ -730,36 +730,48 @@ export async function globalSearch(query: string) {
 }
 
 export async function getExpenseAnalytics() {
-    const expenses = await prisma.expense.findMany({
-        orderBy: { date: 'desc' }
-    });
+    try {
+        const expenses = await prisma.expense.findMany({
+            orderBy: { date: 'desc' }
+        });
 
-    const byCategory: Record<string, number> = {};
-    expenses.forEach(e => {
-        byCategory[e.category] = (byCategory[e.category] || 0) + e.amount;
-    });
+        const byCategory: Record<string, number> = {};
+        expenses.forEach(e => {
+            byCategory[e.category] = (byCategory[e.category] || 0) + e.amount;
+        });
 
-    const byMonth: Record<string, number> = {};
-    expenses.forEach(e => {
-        const month = e.date.toISOString().substring(0, 7);
-        byMonth[month] = (byMonth[month] || 0) + e.amount;
-    });
+        const byMonth: Record<string, number> = {};
+        expenses.forEach(e => {
+            const month = e.date.toISOString().substring(0, 7);
+            byMonth[month] = (byMonth[month] || 0) + e.amount;
+        });
 
-    const now = new Date();
-    const currentMonthStr = now.toISOString().substring(0, 7);
-    const lastMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1);
-    const lastMonthStr = lastMonth.toISOString().substring(0, 7);
+        const now = new Date();
+        const currentMonthStr = now.toISOString().substring(0, 7);
+        const lastMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+        const lastMonthStr = lastMonth.toISOString().substring(0, 7);
 
-    const currentMonthTotal = byMonth[currentMonthStr] || 0;
-    const lastMonthTotal = byMonth[lastMonthStr] || 0;
+        const currentMonthTotal = byMonth[currentMonthStr] || 0;
+        const lastMonthTotal = byMonth[lastMonthStr] || 0;
 
-    return {
-        byCategory: Object.entries(byCategory).map(([name, value]) => ({ name, value })),
-        byMonth: Object.entries(byMonth).map(([month, amount]) => ({ month, amount })).sort((a, b) => a.month.localeCompare(b.month)),
-        currentMonthTotal,
-        lastMonthTotal,
-        totalInvoiced: expenses.reduce((sum, e) => sum + e.amount, 0)
-    };
+        return {
+            byCategory: Object.entries(byCategory).map(([name, value]) => ({ name, value })),
+            byMonth: Object.entries(byMonth).map(([month, amount]) => ({ month, amount })).sort((a, b) => a.month.localeCompare(b.month)),
+            currentMonthTotal,
+            lastMonthTotal,
+            totalInvoiced: expenses.reduce((sum, e) => sum + e.amount, 0)
+        };
+    } catch (e) {
+        console.error("Failed to fetch expense analytics:", e);
+        // Fail gracefully for build-time safety
+        return {
+            byCategory: [],
+            byMonth: [],
+            currentMonthTotal: 0,
+            lastMonthTotal: 0,
+            totalInvoiced: 0
+        };
+    }
 }
 
 export async function getRotationAdvice(cropId: number) {
