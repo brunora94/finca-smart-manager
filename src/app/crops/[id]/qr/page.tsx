@@ -4,6 +4,8 @@ import { QrCode, Printer, ChevronLeft } from "lucide-react";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 
+export const dynamic = 'force-dynamic';
+
 export default async function CropQRPage({ params }: { params: { id: string } }) {
     const crop = await getCropById(parseInt(params.id));
     if (!crop) notFound();

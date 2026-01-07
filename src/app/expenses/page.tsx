@@ -5,6 +5,8 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Euro, Calendar, ShoppingBag, Trash2, TrendingDown } from "lucide-react";
 import { deleteExpense } from "@/app/actions";
 
+export const dynamic = 'force-dynamic';
+
 export default async function ExpensesPage() {
     const expenses = await getExpenses();
     const totalSpent = expenses.reduce((acc, curr) => acc + curr.amount, 0);
