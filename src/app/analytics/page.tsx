@@ -11,8 +11,8 @@ export const revalidate = 0;
 export default async function AnalyticsPage() {
     // Debug: Temporarily mock data to pass Vercel build
     const data = {
-        byCategory: [],
-        byMonth: [],
+        byCategory: [] as { name: string; value: number }[],
+        byMonth: [] as { month: string; amount: number }[],
         currentMonthTotal: 0,
         lastMonthTotal: 0,
         totalInvoiced: 0
