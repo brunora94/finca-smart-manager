@@ -1,15 +1,22 @@
 import { PrismaClient } from "@prisma/client";
 
 const prismaClientSingleton = () => {
+    // Attempt to initialize Prisma
     try {
         return new PrismaClient()
     } catch (e) {
-        console.warn("Failed to initialize Prisma Client (likely during build). Using fallback mock.");
-        // Return a proxy that handles any property access gracefully to prevent crashes
+        // Only mock if we are strictly in a build phase where env vars might be missing
+        // If we are in runtime production, we WANT this to crash so we see the logs, 
+        // but let's try to mock just to be safe for the build process.
+        console.error("Failed to initialize Prisma Client:", e);
+
+        // If we are getting this in production runtime, it means configuration is wrong.
+        // But throwing here crashes the pod. Let's return the proxy but log LOUDLY.
         return new Proxy({}, {
             get: (target, prop) => {
-                if (prop === 'then') return undefined; // Promise safety
-                return () => Promise.resolve([]); // Return empty array for any function call (findMany, etc.)
+                if (prop === 'then') return undefined;
+                console.error(`[Prisma Mock] Attempted to access property '${String(prop)}' on mock client. DB Connection likely failed.`);
+                return () => Promise.resolve([]);
             }
         }) as unknown as PrismaClient;
     }
