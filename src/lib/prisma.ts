@@ -2,14 +2,13 @@ import { PrismaClient } from "@prisma/client";
 
 const prismaClientSingleton = () => {
     try {
-        // @ts-ignore - Prisma 7 strict types might complain, but this is required for runtime connection
         return new PrismaClient({
             datasources: {
                 db: {
                     url: process.env.DATABASE_URL,
                 },
             },
-        })
+        } as any)
     } catch (e) {
         console.error("Failed to initialize Prisma Client:", e);
 
