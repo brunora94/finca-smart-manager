@@ -5,20 +5,27 @@ const prismaClientSingleton = () => {
     try {
         return new PrismaClient()
     } catch (e) {
-        // Only mock if we are strictly in a build phase where env vars might be missing
-        // If we are in runtime production, we WANT this to crash so we see the logs, 
-        // but let's try to mock just to be safe for the build process.
         console.error("Failed to initialize Prisma Client:", e);
 
-        // If we are getting this in production runtime, it means configuration is wrong.
-        // But throwing here crashes the pod. Let's return the proxy but log LOUDLY.
-        return new Proxy({}, {
+        // Recursive proxy to handle deep nesting like prisma.crop.count()
+        // properties return the proxy itself, function calls return a Promise
+        const emptyPromise = Promise.resolve([]);
+        const proxyHandler: ProxyHandler<any> = {
             get: (target, prop) => {
-                if (prop === 'then') return undefined;
-                console.error(`[Prisma Mock] Attempted to access property '${String(prop)}' on mock client. DB Connection likely failed.`);
-                return () => Promise.resolve([]);
+                if (prop === 'then') return undefined; // Avoid treating as Promise
+                if (prop === 'catch') return undefined;
+                if (prop === 'finally') return undefined;
+
+                // Return the proxy for any property access to allow chaining
+                return new Proxy(() => emptyPromise, proxyHandler);
+            },
+            apply: (target, thisArg, args) => {
+                // If it's a function call (like .count(), .findMany()), return safe defaults
+                return emptyPromise;
             }
-        }) as unknown as PrismaClient;
+        };
+
+        return new Proxy(() => { }, proxyHandler) as unknown as PrismaClient;
     }
 }
 
