@@ -6,6 +6,7 @@ import { Euro, Calendar, ShoppingBag, Trash2, TrendingDown } from "lucide-react"
 import { deleteExpense } from "@/app/actions";
 
 export const dynamic = 'force-dynamic';
+export const revalidate = 0;
 
 export default async function ExpensesPage() {
     const expenses = await getExpenses();

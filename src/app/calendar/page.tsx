@@ -4,6 +4,7 @@ import { Calendar as CalendarIcon, Leaf, Clock, Camera } from "lucide-react"
 import Link from "next/link"
 
 export const dynamic = 'force-dynamic';
+export const revalidate = 0;
 
 // Helper to group by month
 function groupByMonth(events: any[]) {
