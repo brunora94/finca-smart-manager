@@ -1,16 +1,12 @@
 const fs = require('fs');
 const path = require('path');
 const { PrismaClient } = require('@prisma/client');
-const { PrismaBetterSqlite3 } = require('@prisma/adapter-better-sqlite3');
 
 async function cleanup() {
     console.log("Starting cleanup...");
 
     // 1. Wipe Database Logs
-    const adapter = new PrismaBetterSqlite3({
-        url: 'dev.db'
-    })
-    const prisma = new PrismaClient({ adapter })
+    const prisma = new PrismaClient();
 
     try {
         const deleted = await prisma.cropLog.deleteMany({});
