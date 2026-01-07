@@ -1,4 +1,3 @@
-```typescript
 import { PrismaClient } from "@prisma/client";
 
 const prismaClientSingleton = () => {
@@ -11,9 +10,9 @@ const prismaClientSingleton = () => {
         const proxyHandler: ProxyHandler<any> = {
             get: (target, prop) => {
                 if (prop === 'then') return undefined; // Promise safety
-                
+
                 // Return a function that returns a Promise resolving to a safe default
-                return new Proxy(() => {}, {
+                return new Proxy(() => { }, {
                     apply: (target, thisArg, args) => {
                         const propName = String(prop);
                         if (propName === 'count') return Promise.resolve(0);
@@ -25,16 +24,16 @@ const prismaClientSingleton = () => {
                     },
                     get: (target, subProp) => {
                         // Handle deep chaining like prisma.crop.count()
-                         if (subProp === 'then') return undefined;
-                         return new Proxy(() => {}, {
-                             apply: (subTarget, subThis, subArgs) => {
-                                 const subPropName = String(subProp);
-                                 if (subPropName === 'count') return Promise.resolve(0);
-                                 if (subPropName === 'findMany') return Promise.resolve([]);
-                                 if (subPropName === 'findUnique' || subPropName === 'findFirst') return Promise.resolve(null);
-                                 return Promise.resolve({});
-                             }
-                         });
+                        if (subProp === 'then') return undefined;
+                        return new Proxy(() => { }, {
+                            apply: (subTarget, subThis, subArgs) => {
+                                const subPropName = String(subProp);
+                                if (subPropName === 'count') return Promise.resolve(0);
+                                if (subPropName === 'findMany') return Promise.resolve([]);
+                                if (subPropName === 'findUnique' || subPropName === 'findFirst') return Promise.resolve(null);
+                                return Promise.resolve({});
+                            }
+                        });
                     }
                 });
             }
