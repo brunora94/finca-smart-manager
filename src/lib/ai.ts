@@ -5,7 +5,13 @@ import path from "path";
 // Initialize Gemini client lazily
 let geminiClients: GoogleGenerativeAI[] = [];
 
-const MODELS_TO_TRY = ["gemini-1.5-flash-8b", "gemini-1.5-flash", "gemini-1.5-pro"];
+// Models to try in order of preference
+const MODELS_TO_TRY = [
+    "gemini-1.5-flash",
+    "gemini-1.5-flash-8b",
+    "gemini-2.0-flash-exp",
+    "gemini-1.5-pro"
+];
 
 function getGeminiClients(): GoogleGenerativeAI[] {
     if (geminiClients.length > 0) return geminiClients;
@@ -22,37 +28,51 @@ function getGeminiClients(): GoogleGenerativeAI[] {
         return [];
     }
 
-    geminiClients = keys.map(k => new GoogleGenerativeAI(k));
+    // Clean keys (remove potential extra whitespace/quotes)
+    const cleanKeys = keys.map(k => k.trim().replace(/^["']|["']$/g, ""));
+    geminiClients = cleanKeys.map(k => new GoogleGenerativeAI(k));
     return geminiClients;
 }
 
 export async function runWithResilience(action: (model: any) => Promise<any>) {
     const clients = getGeminiClients();
-    if (clients.length === 0) throw new Error("No AI providers available");
+    if (clients.length === 0) throw new Error("No hay proveedores de IA configurados. Revisa tus variables de entorno.");
 
     let lastError: any = null;
 
     // Outer loop: Try each available API Key
-    for (const client of clients) {
+    for (let i = 0; i < clients.length; i++) {
+        const client = clients[i];
+
         // Inner loop: Try each recommended model for this key
         for (const modelName of MODELS_TO_TRY) {
             try {
                 const model = client.getGenerativeModel({ model: modelName });
                 return await action(model);
             } catch (e: any) {
-                const isQuota = e.message?.includes('429') || e.message?.includes('quota');
+                const errorMessage = e.message || "";
+                const isQuota = errorMessage.includes('429') || errorMessage.includes('quota');
+                const isNotFound = errorMessage.includes('404') || errorMessage.includes('not found') || errorMessage.includes('not supported');
+
                 if (isQuota) {
-                    console.warn(`Gemini Quota exceeded for model ${modelName}. Trying next model/key...`);
-                    lastError = e;
-                    continue; // Skip to next model
+                    console.warn(`Gemini Quota exceeded for model ${modelName} on Key ${i + 1}. Trying next...`);
+                    lastError = new Error(`Cuota agotada en Key ${i + 1} (${modelName}). Intentando alternativa...`);
+                    continue;
                 }
-                console.warn(`Gemini trial with ${modelName} failed:`, e.message);
+
+                if (isNotFound) {
+                    console.warn(`Gemini Model ${modelName} not available or not supported on Key ${i + 1}. Skipping...`);
+                    lastError = e;
+                    continue;
+                }
+
+                console.warn(`Gemini error with ${modelName} on Key ${i + 1}:`, errorMessage);
                 lastError = e;
                 continue;
             }
         }
     }
-    throw lastError || new Error("All AI Providers and Models failed");
+    throw lastError || new Error("Todos los modelos y llaves de IA han fallado.");
 }
 
 export async function analyzeCropImage(imageUrl: string, userNote?: string, context?: any) {
