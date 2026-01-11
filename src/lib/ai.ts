@@ -171,7 +171,7 @@ export async function getAiDailyAdvice(context: {
         return result.response.text().trim();
     } catch (e: any) {
         console.error("Dashboard AI Advice Error:", e.message);
-        return `IA en mantenimiento. Error: ${e.message?.substring(0, 50)} 🌱`;
+        return `IA en mantenimiento. Error: ${e.message?.substring(0, 200)} 🌱`;
     }
 }
 
