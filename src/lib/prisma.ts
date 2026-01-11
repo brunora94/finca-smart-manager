@@ -11,7 +11,10 @@ const prismaClientSingleton = () => {
 
         const pool = new pg.Pool({
             connectionString,
-            ssl: { rejectUnauthorized: false }
+            ssl: { rejectUnauthorized: false },
+            max: 10, // Limit concurrent connections for Vercel
+            idleTimeoutMillis: 30000,
+            connectionTimeoutMillis: 10000, // Fail fast if DB is unreachable
         });
         const adapter = new PrismaPg(pool);
         return new PrismaClient({ adapter });

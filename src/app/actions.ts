@@ -8,6 +8,28 @@ import { getRotationType, getNextInRotation, getCategoryDescription } from "@/li
 import { runWithResilience } from "@/lib/ai";
 
 export async function getDashboardStats() {
+    // 1. Calculations that DON'T need DB (Always available)
+    const lunarInfo = getLunarInfo();
+    let weatherData: any = null;
+    try {
+        weatherData = await getCurrentWeather();
+    } catch (e) {
+        console.error("Weather fetch failed:", e);
+    }
+
+    // 2. Default values for DB-dependent stats
+    let stats = {
+        activeCrops: 0,
+        pendingTasks: 0,
+        urgentTasks: 0,
+        monthlySpending: 0,
+        aiAdvice: "Buscando consejos...",
+        farmHealthScore: 0,
+        lunarInfo,
+        resourceAlerts: [] as any[],
+        agronomicAlerts: [] as any[]
+    };
+
     try {
         const activeCropsCount = await prisma.crop.count({
             where: { status: 'Planted' }
@@ -38,8 +60,6 @@ export async function getDashboardStats() {
 
         const monthlySpending = monthlyExpenses.reduce((sum, exp) => sum + exp.amount, 0)
 
-        const weatherData = await getCurrentWeather();
-
         // Farm Health Score (0-100)
         const thirtyDaysAgo = new Date();
         thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
@@ -49,7 +69,12 @@ export async function getDashboardStats() {
 
         const taskScore = totalTasks > 0 ? (completedTasks / totalTasks) * 50 : 50;
 
-        const recentLogs = await prisma.cropLog.findMany({ take: 10, orderBy: { createdAt: 'desc' } })
+        const recentLogs = await prisma.cropLog.findMany({
+            take: 10,
+            orderBy: { createdAt: 'desc' },
+            select: { aiAnalysis: true, cropId: true }
+        })
+
         const healthValues = recentLogs.map(l => {
             if (l.aiAnalysis?.includes('Bueno')) return 50;
             if (l.aiAnalysis?.includes('Regular')) return 25;
@@ -60,7 +85,7 @@ export async function getDashboardStats() {
 
         const farmHealthScore = Math.round(taskScore + healthScore);
 
-        // IA Advice (Optional - wrapped in try/catch to prevent startup hang)
+        // IA Advice
         let aiAdvice = "";
         try {
             const activeCrops = await prisma.crop.findMany({ where: { status: 'Planted' }, take: 5 })
@@ -74,11 +99,8 @@ export async function getDashboardStats() {
             })
         } catch (e) {
             console.error("Dashboard AI Advice failed:", e);
-            aiAdvice = "No se pudo obtener el consejo de la IA en este momento.";
+            aiAdvice = "El asesor está offline ahora mismo.";
         }
-
-        // Lunar Info
-        const lunarInfo = getLunarInfo();
 
         // Resource Alerts
         let resourceAlerts: any[] = [];
@@ -89,7 +111,7 @@ export async function getDashboardStats() {
             console.error("Failed to fetch resources for stats:", e);
         }
 
-        // Agronomic Alerts (v1.8)
+        // Agronomic Alerts
         let agronomicAlerts: any[] = [];
         try {
             agronomicAlerts = recentLogs
@@ -108,28 +130,22 @@ export async function getDashboardStats() {
         }
 
         return {
+            ...stats,
             activeCrops: activeCropsCount,
             pendingTasks: pendingTasksCount,
             urgentTasks: urgentTasksCount,
             monthlySpending,
-            aiAdvice,
+            aiAdvice: aiAdvice || "Sin consejos hoy.",
             farmHealthScore,
-            lunarInfo,
             resourceAlerts: resourceAlerts.map((r: any) => ({ name: r.name, quantity: r.quantity, unit: r.unit })),
             agronomicAlerts
         }
     } catch (e: any) {
-        console.error("CRITICAL: getDashboardStats failed:", e.message);
+        console.error("DB Error in getDashboardStats:", e.message);
+        // Returns the pre-calculated Lunar/Weather + Error message in advice
         return {
-            activeCrops: 0,
-            pendingTasks: 0,
-            urgentTasks: 0,
-            monthlySpending: 0,
-            aiAdvice: `Error de Base de Datos: ${e.message?.substring(0, 100)}... Revisa tu DATABASE_URL en Vercel.`,
-            farmHealthScore: 0,
-            lunarInfo: { phase: "Unknown", illumination: 0, recommendation: "Cargando...", dayType: "Descanso" },
-            resourceAlerts: [],
-            agronomicAlerts: []
+            ...stats,
+            aiAdvice: `Error BD: ${e.message?.substring(0, 50)}... (El clima y la luna siguen operativos 🌕)`
         }
     }
 }
