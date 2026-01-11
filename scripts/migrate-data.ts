@@ -1,10 +1,20 @@
 import Database from 'better-sqlite3';
 import { PrismaClient } from '@prisma/client';
 
+import { PrismaPg } from '@prisma/adapter-pg';
+import pg from 'pg';
+
 const sqlite = new Database('dev.db');
 
-// Initialize Prisma (uses schema url)
-const prisma = new PrismaClient();
+const connectionString = process.env.DATABASE_URL;
+if (!connectionString) {
+    console.error("❌ DATABASE_URL missing");
+    process.exit(1);
+}
+
+const pool = new pg.Pool({ connectionString });
+const adapter = new PrismaPg(pool);
+const prisma = new PrismaClient({ adapter });
 
 async function migrate() {
     console.log("🚀 Starting migration from dev.db to Supabase...");

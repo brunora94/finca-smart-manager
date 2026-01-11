@@ -1,12 +1,19 @@
 import { PrismaClient } from "@prisma/client";
+import { PrismaPg } from "@prisma/adapter-pg";
+import pg from "pg";
 
 const prismaClientSingleton = () => {
     try {
-        return new PrismaClient({
-            datasourceUrl: process.env.DATABASE_URL
-        } as any)
+        const connectionString = process.env.DATABASE_URL;
+        if (!connectionString) {
+            throw new Error("DATABASE_URL is not defined");
+        }
+
+        const pool = new pg.Pool({ connectionString });
+        const adapter = new PrismaPg(pool);
+        return new PrismaClient({ adapter });
     } catch (e) {
-        console.error("Failed to initialize Prisma Client:", e);
+        console.error("Failed to initialize Prisma Client with Adapter:", e);
 
         // Smart Proxy to handle specific Prisma methods with safe defaults
         const proxyHandler: ProxyHandler<any> = {
