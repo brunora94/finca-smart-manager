@@ -11,9 +11,11 @@ export async function runWithResilience(action: (model: any) => Promise<any>) {
     try {
         if (!genAI) {
             const apiKey = process.env.GOOGLE_API_KEY;
+            console.log("AI Init - Key length:", apiKey?.length || 0, "Prefix:", apiKey?.substring(0, 4));
+
             if (!apiKey) {
-                console.error("AI Error: GOOGLE_API_KEY is missing in environment variables.");
-                throw new Error("GOOGLE_API_KEY not found");
+                console.error("AI Error: GOOGLE_API_KEY IS UNDEFINED in production");
+                throw new Error("GOOGLE_API_KEY not found in process.env");
             }
             genAI = new GoogleGenerativeAI(apiKey);
         }
