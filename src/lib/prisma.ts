@@ -10,6 +10,7 @@ const prismaClientSingleton = () => {
         // Support multiple environment variable names including the custom supbase_ prefix
         const connectionString = (
             process.env.supbase_POSTGRES_URL ||
+            process.env.supbase_postgres_url ||
             process.env.supbase_POSTGRES_PRISMA_URL ||
             process.env.SUPABASE_DATABASE_URL ||
             process.env.SUPABASE_URL ||
