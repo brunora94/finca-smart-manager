@@ -191,7 +191,7 @@ export async function getAiDailyAdvice(context: {
         const isQuota = e.message?.includes('429') || e.message?.includes('quota');
         return isQuota
             ? "La IA está descansando un momento (límite de cuota gratuito). Prueba en un minuto. ☕"
-            : `IA en mantenimiento. Error: ${e.message?.substring(0, 50)} 🌱`;
+            : `IA en mantenimiento. Error: ${e.message?.substring(0, 500)} 🌱`;
     }
 }
 
