@@ -125,7 +125,7 @@ export async function getDashboardStats() {
             pendingTasks: 0,
             urgentTasks: 0,
             monthlySpending: 0,
-            aiAdvice: "Sistema en mantenimiento temporal. Verifica tu conexión a la base de datos.",
+            aiAdvice: `Error de Base de Datos: ${e.message?.substring(0, 100)}... Revisa tu DATABASE_URL en Vercel.`,
             farmHealthScore: 0,
             lunarInfo: { phase: "Unknown", illumination: 0, recommendation: "Cargando...", dayType: "Descanso" },
             resourceAlerts: [],
