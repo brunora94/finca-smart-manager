@@ -15,8 +15,8 @@ const prismaClientSingleton = () => {
         });
         const adapter = new PrismaPg(pool);
         return new PrismaClient({ adapter });
-    } catch (e) {
-        console.error("Failed to initialize Prisma Client with Adapter:", e);
+    } catch (e: any) {
+        console.error("FATAL: Prisma Client init failed:", e.message);
 
         // Smart Proxy to handle specific Prisma methods with safe defaults
         const proxyHandler: ProxyHandler<any> = {

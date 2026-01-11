@@ -106,17 +106,20 @@ export async function getDashboardStats() {
         console.error("Failed to parse agronomic alerts:", e);
     }
 
+} catch (e: any) {
+    console.error("CRITICAL: getDashboardStats failed:", e.message);
     return {
-        activeCrops: activeCropsCount,
-        pendingTasks: pendingTasksCount,
-        urgentTasks: urgentTasksCount,
-        monthlySpending,
-        aiAdvice,
-        farmHealthScore,
-        lunarInfo,
-        resourceAlerts: resourceAlerts.map((r: any) => ({ name: r.name, quantity: r.quantity, unit: r.unit })),
-        agronomicAlerts
+        activeCrops: 0,
+        pendingTasks: 0,
+        urgentTasks: 0,
+        monthlySpending: 0,
+        aiAdvice: "Sistema en mantenimiento temporal. Verifica tu conexión a la base de datos.",
+        farmHealthScore: 0,
+        lunarInfo: { phase: "Unknown", visibility: 0, advice: "Cargando..." },
+        resourceAlerts: [],
+        agronomicAlerts: []
     }
+}
 }
 
 export async function getUrgentTasks() {
