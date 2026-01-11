@@ -3,6 +3,9 @@ import { PrismaPg } from "@prisma/adapter-pg";
 import pg from "pg";
 
 const prismaClientSingleton = () => {
+    // Last resort for self-signed certificate errors in Vercel/Supabase
+    process.env.NODE_TLS_REJECT_UNAUTHORIZED = "0";
+
     try {
         // Support multiple environment variable names including the custom supbase_ prefix
         const connectionString = (
