@@ -4,17 +4,24 @@ import pg from "pg";
 
 const prismaClientSingleton = () => {
     try {
-        const connectionString = process.env.DATABASE_URL;
+        // Support multiple environment variable names (Vercel uses different ones)
+        const connectionString = (
+            process.env.DATABASE_URL ||
+            process.env.POSTGRES_PRISMA_URL ||
+            process.env.POSTGRES_URL ||
+            process.env.POSTGRES_URL_NON_POOLING
+        )?.trim().replace(/^["']|["']$/g, ""); // Remove quotes and spaces
+
         if (!connectionString) {
-            throw new Error("DATABASE_URL is not defined");
+            throw new Error("No se encontró ninguna variable de conexión (DATABASE_URL, etc.) en el entorno.");
         }
 
         const pool = new pg.Pool({
             connectionString,
             ssl: { rejectUnauthorized: false },
-            max: 10, // Limit concurrent connections for Vercel
+            max: 10,
             idleTimeoutMillis: 30000,
-            connectionTimeoutMillis: 10000, // Fail fast if DB is unreachable
+            connectionTimeoutMillis: 15000, // Slightly more time for cold starts
         });
         const adapter = new PrismaPg(pool);
         return new PrismaClient({ adapter });
