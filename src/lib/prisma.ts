@@ -24,8 +24,31 @@ const prismaClientSingleton = () => {
             throw new Error("No se encontró ninguna variable de conexión (DATABASE_URL, etc.) en el entorno.");
         }
 
+        // HEAL: Encode special characters in password if they are unencoded
+        // Example: postgresql://user:pass@word@host -> postgresql://user:pass%40word@host
+        let sanitizedString = connectionString;
+        try {
+            const url = new URL(connectionString);
+            if (url.password) {
+                // The URL constructor might already handle encoding if the string was valid,
+                // but if there are multiple @ symbols, it might fail or misparse.
+                // If it parsed, we re-serialize it to ensure everything is encoded.
+                sanitizedString = url.toString();
+            }
+        } catch (e) {
+            // If URL parsing fails, we might have multiple @ symbols. 
+            // We'll try to manually encode the part between the second ':' and the last '@'.
+            const match = connectionString.match(/^(postgresql:\/\/.*?):(.*)@(.*)$/);
+            if (match) {
+                const [_, prefix, password, suffix] = match;
+                sanitizedString = `${prefix}:${encodeURIComponent(password)}@${suffix}`;
+            }
+        }
+
+        console.log(`[Database] Connecting to ${sanitizedString.split('@')[1] || 'unknown host'}`);
+
         const pool = new pg.Pool({
-            connectionString,
+            connectionString: sanitizedString,
             ssl: { rejectUnauthorized: false },
             max: 10,
             idleTimeoutMillis: 30000,
