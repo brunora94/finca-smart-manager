@@ -5,7 +5,7 @@ import path from "path";
 // Initialize Gemini client lazily
 let genAI: GoogleGenerativeAI | null = null;
 
-const MODELS_TO_TRY = ["gemini-1.5-flash", "gemini-1.5-pro", "gemini-2.0-flash-exp"];
+const MODELS_TO_TRY = ["gemini-1.5-flash", "gemini-1.5-flash-8b", "gemini-1.5-pro", "gemini-2.0-flash-exp"];
 
 export async function runWithResilience(action: (model: any) => Promise<any>) {
     try {
@@ -169,8 +169,9 @@ export async function getAiDailyAdvice(context: {
 
         const result = await runWithResilience((model) => model.generateContent(prompt));
         return result.response.text().trim();
-    } catch (e) {
-        return "Concéntrate en tus labores. La IA está fuera de línea. 🌱";
+    } catch (e: any) {
+        console.error("Dashboard AI Advice Error:", e.message);
+        return `IA en mantenimiento. Error: ${e.message?.substring(0, 50)} 🌱`;
     }
 }
 
