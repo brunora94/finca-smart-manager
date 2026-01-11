@@ -120,6 +120,16 @@ export const VEGETABLES: PlantInfo[] = [
             { target: 'tomato', type: 'Excellent', reason: 'Gran pareja en el huerto.' },
             { target: 'peas', type: 'Antagonistic', reason: 'La cebolla inhibe el crecimiento de las leguminosas.' }
         ]
+    },
+    {
+        id: 'broccoli',
+        name: 'Brócoli',
+        description: 'Cultivo de temporada fresca. Rico en vitaminas y muy saludable.',
+        compatibilities: [
+            { target: 'potato', type: 'Good', reason: 'Se ayudan mutuamente en la absorción de nutrientes.' },
+            { target: 'onion', type: 'Good', reason: 'La cebolla ayuda a camuflar el olor del brócoli ante plagas.' },
+            { target: 'tomato', type: 'Bad', reason: 'Compiten por recursos y pueden atraer plagas similares.' }
+        ]
     }
 ];
 
