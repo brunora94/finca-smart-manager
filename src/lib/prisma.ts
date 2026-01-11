@@ -3,11 +3,7 @@ import { PrismaClient } from "@prisma/client";
 const prismaClientSingleton = () => {
     try {
         return new PrismaClient({
-            datasources: {
-                db: {
-                    url: process.env.DATABASE_URL,
-                },
-            },
+            datasourceUrl: process.env.DATABASE_URL
         } as any)
     } catch (e) {
         console.error("Failed to initialize Prisma Client:", e);
