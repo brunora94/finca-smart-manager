@@ -8,27 +8,32 @@ let genAI: GoogleGenerativeAI | null = null;
 const MODELS_TO_TRY = ["gemini-2.5-flash", "gemini-2.0-flash-exp", "gemini-2.0-flash"];
 
 export async function runWithResilience(action: (model: any) => Promise<any>) {
-    if (!genAI) {
-        const apiKey = process.env.GOOGLE_API_KEY;
-        if (!apiKey) throw new Error("GOOGLE_API_KEY not found");
-        genAI = new GoogleGenerativeAI(apiKey);
-    }
+    try {
+        if (!genAI) {
+            const apiKey = process.env.GOOGLE_API_KEY;
+            if (!apiKey) {
+                console.error("AI Error: GOOGLE_API_KEY is missing in environment variables.");
+                throw new Error("GOOGLE_API_KEY not found");
+            }
+            genAI = new GoogleGenerativeAI(apiKey);
+        }
 
-    let lastError: any = null;
-    for (const modelName of MODELS_TO_TRY) {
-        try {
-            const model = genAI.getGenerativeModel({ model: modelName });
-            return await action(model);
-        } catch (e: any) {
-            console.warn(`Gemini trial with ${modelName} failed:`, e.message);
-            lastError = e;
-            if (e.message?.includes('404') || e.message?.includes('not found')) {
+        let lastError: any = null;
+        for (const modelName of MODELS_TO_TRY) {
+            try {
+                const model = genAI.getGenerativeModel({ model: modelName });
+                return await action(model);
+            } catch (e: any) {
+                console.warn(`Gemini trial with ${modelName} failed:`, e.message);
+                lastError = e;
                 continue;
             }
-            continue;
         }
+        throw lastError || new Error("All models failed");
+    } catch (error: any) {
+        console.error("AI Resilience Error:", error.message);
+        throw error;
     }
-    throw lastError || new Error("All models failed");
 }
 
 export async function analyzeCropImage(imageUrl: string, userNote?: string, context?: any) {
