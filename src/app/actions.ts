@@ -127,7 +127,7 @@ export async function getDashboardStats() {
             monthlySpending: 0,
             aiAdvice: "Sistema en mantenimiento temporal. Verifica tu conexión a la base de datos.",
             farmHealthScore: 0,
-            lunarInfo: { phase: "Unknown", visibility: 0, advice: "Cargando..." },
+            lunarInfo: { phase: "Unknown", illumination: 0, recommendation: "Cargando...", dayType: "Descanso" },
             resourceAlerts: [],
             agronomicAlerts: []
         }
