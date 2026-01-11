@@ -25,34 +25,38 @@ const prismaClientSingleton = () => {
         }
 
         // HEAL: Encode special characters in password if they are unencoded
-        // Example: postgresql://user:pass@word@host -> postgresql://user:pass%40word@host
         let sanitizedString = connectionString;
         try {
             const url = new URL(connectionString);
             if (url.password) {
-                // The URL constructor might already handle encoding if the string was valid,
-                // but if there are multiple @ symbols, it might fail or misparse.
-                // If it parsed, we re-serialize it to ensure everything is encoded.
+                // Manually encode password parts that might have @ or ! that URL() might miss
+                const encodedPassword = encodeURIComponent(decodeURIComponent(url.password));
+                url.password = encodedPassword;
                 sanitizedString = url.toString();
             }
         } catch (e) {
-            // If URL parsing fails, we might have multiple @ symbols. 
-            // We'll try to manually encode the part between the second ':' and the last '@'.
             const match = connectionString.match(/^(postgresql:\/\/.*?):(.*)@(.*)$/);
             if (match) {
                 const [_, prefix, password, suffix] = match;
-                sanitizedString = `${prefix}:${encodeURIComponent(password)}@${suffix}`;
+                // Double protection for @ and !
+                const safePassword = encodeURIComponent(decodeURIComponent(password));
+                sanitizedString = `${prefix}:${safePassword}@${suffix}`;
             }
         }
 
-        console.log(`[Database] Connecting to ${sanitizedString.split('@')[1] || 'unknown host'}`);
+        // CRITICAL: Overwrite the global DATABASE_URL. 
+        // Prisma 7 often reads this even if an adapter is provided, 
+        // and if it points to a Prisma Cloud URL, it triggers the circuit breaker.
+        process.env.DATABASE_URL = sanitizedString;
+
+        console.log(`[Database] Connecting to ${sanitizedString.split('@')[1]?.split('?')[0] || 'remote host'}`);
 
         const pool = new pg.Pool({
             connectionString: sanitizedString,
             ssl: { rejectUnauthorized: false },
             max: 10,
             idleTimeoutMillis: 30000,
-            connectionTimeoutMillis: 15000, // Slightly more time for cold starts
+            connectionTimeoutMillis: 30000, // Increased timeout for cold starts
         });
         const adapter = new PrismaPg(pool);
         return new PrismaClient({ adapter });

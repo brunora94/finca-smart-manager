@@ -18,14 +18,18 @@ export default defineConfig({
             if (!raw) return "";
 
             // Heal: Encode special chars in password
+            let sanitized = raw;
             const match = raw.match(/^(postgresql:\/\/.*?):(.*)@(.*)$/);
             if (match) {
                 const [_, prefix, password, suffix] = match;
-                if (!password.includes('%')) { // Only encode if not already encoded
-                    return `${prefix}:${encodeURIComponent(password)}@${suffix}`;
-                }
+                // Double protection for @ and ! (decode first to avoid double encoding)
+                const safePassword = encodeURIComponent(decodeURIComponent(password));
+                sanitized = `${prefix}:${safePassword}@${suffix}`;
             }
-            return raw;
+
+            // Force override global env for CLI
+            process.env.DATABASE_URL = sanitized;
+            return sanitized;
         })(),
     },
 });
