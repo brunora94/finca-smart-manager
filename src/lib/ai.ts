@@ -7,10 +7,11 @@ let geminiClients: GoogleGenerativeAI[] = [];
 
 // Models to try in order of preference
 const MODELS_TO_TRY = [
+    "gemini-1.5-flash-latest",
     "gemini-1.5-flash",
-    "gemini-1.5-flash-8b",
-    "gemini-2.0-flash-exp",
-    "gemini-1.5-pro"
+    "gemini-1.5-pro-latest",
+    "gemini-1.5-pro",
+    "gemini-2.0-flash-exp"
 ];
 
 function getGeminiClients(): GoogleGenerativeAI[] {

@@ -143,9 +143,10 @@ export async function getDashboardStats() {
     } catch (e: any) {
         console.error("DB Error in getDashboardStats:", e.message);
         // Returns the pre-calculated Lunar/Weather + Error message in advice
+        // Using a longer substring to see the "Invalid invocation" details
         return {
             ...stats,
-            aiAdvice: `Error BD: ${e.message?.substring(0, 50)}... (El clima y la luna siguen operativos 🌕)`
+            aiAdvice: `Error BD: ${e.message?.substring(0, 500)}... (El clima y la luna siguen operativos 🌕)`
         }
     }
 }
