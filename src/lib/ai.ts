@@ -3,39 +3,56 @@ import fs from "fs";
 import path from "path";
 
 // Initialize Gemini client lazily
-let genAI: GoogleGenerativeAI | null = null;
+let geminiClients: GoogleGenerativeAI[] = [];
 
 const MODELS_TO_TRY = ["gemini-1.5-flash-8b", "gemini-1.5-flash", "gemini-1.5-pro"];
 
+function getGeminiClients(): GoogleGenerativeAI[] {
+    if (geminiClients.length > 0) return geminiClients;
+
+    // Collect all available Google Keys
+    const keys = [
+        process.env.GOOGLE_API_KEY,
+        process.env.GOOGLE_API_KEY_2,
+        process.env.GOOGLE_API_KEY_3
+    ].filter(Boolean) as string[];
+
+    if (keys.length === 0) {
+        console.error("AI Error: No GOOGLE_API_KEY found in environment.");
+        return [];
+    }
+
+    geminiClients = keys.map(k => new GoogleGenerativeAI(k));
+    return geminiClients;
+}
+
 export async function runWithResilience(action: (model: any) => Promise<any>) {
-    try {
-        if (!genAI) {
-            const apiKey = process.env.GOOGLE_API_KEY;
-            console.log("AI Init - Key length:", apiKey?.length || 0, "Prefix:", apiKey?.substring(0, 4));
+    const clients = getGeminiClients();
+    if (clients.length === 0) throw new Error("No AI providers available");
 
-            if (!apiKey) {
-                console.error("AI Error: GOOGLE_API_KEY IS UNDEFINED in production");
-                throw new Error("GOOGLE_API_KEY not found in process.env");
-            }
-            genAI = new GoogleGenerativeAI(apiKey);
-        }
+    let lastError: any = null;
 
-        let lastError: any = null;
+    // Outer loop: Try each available API Key
+    for (const client of clients) {
+        // Inner loop: Try each recommended model for this key
         for (const modelName of MODELS_TO_TRY) {
             try {
-                const model = genAI.getGenerativeModel({ model: modelName });
+                const model = client.getGenerativeModel({ model: modelName });
                 return await action(model);
             } catch (e: any) {
+                const isQuota = e.message?.includes('429') || e.message?.includes('quota');
+                if (isQuota) {
+                    console.warn(`Gemini Quota exceeded for model ${modelName}. Trying next model/key...`);
+                    lastError = e;
+                    continue; // Skip to next model
+                }
                 console.warn(`Gemini trial with ${modelName} failed:`, e.message);
                 lastError = e;
                 continue;
             }
         }
-        throw lastError || new Error("All models failed");
-    } catch (error: any) {
-        console.error("AI Resilience Error:", error.message);
-        throw error;
     }
+    throw lastError || new Error("All AI Providers and Models failed");
 }
 
 export async function analyzeCropImage(imageUrl: string, userNote?: string, context?: any) {
