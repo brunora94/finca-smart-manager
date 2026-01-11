@@ -39,10 +39,12 @@ export async function runWithResilience(action: (model: any) => Promise<any>) {
 export async function analyzeCropImage(imageUrl: string, userNote?: string, context?: any) {
     try {
         let base64Image = "";
+        let mimeType = "image/jpeg";
 
         if (imageUrl.startsWith('http')) {
             const response = await fetch(imageUrl);
             if (!response.ok) throw new Error(`Failed to fetch image: ${response.statusText}`);
+            mimeType = response.headers.get('content-type') || "image/jpeg";
             const arrayBuffer = await response.arrayBuffer();
             base64Image = Buffer.from(arrayBuffer).toString('base64');
         } else {
@@ -93,7 +95,7 @@ export async function analyzeCropImage(imageUrl: string, userNote?: string, cont
 
         const result = await runWithResilience((model) => model.generateContent([
             prompt,
-            { inlineData: { data: base64Image, mimeType: "image/jpeg" } }
+            { inlineData: { data: base64Image, mimeType: mimeType } }
         ]));
 
         const text = result.response.text();
