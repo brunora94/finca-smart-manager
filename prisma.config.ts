@@ -27,8 +27,13 @@ export default defineConfig({
                 sanitized = `${prefix}:${safePassword}@${suffix}`;
             }
 
-            // Force override global env for CLI
+            // Force override global env for CLI to avoid Prisma 7 circuit breaker
             process.env.DATABASE_URL = sanitized;
+            delete process.env.PRISMA_DATABASE_URL;
+            delete process.env.POSTGRES_URL;
+            delete process.env.POSTGRES_PRISMA_URL;
+            delete process.env.POSTGRES_URL_NON_POOLING;
+
             return sanitized;
         })(),
     },

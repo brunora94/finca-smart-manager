@@ -44,10 +44,13 @@ const prismaClientSingleton = () => {
             }
         }
 
-        // CRITICAL: Overwrite the global DATABASE_URL. 
-        // Prisma 7 often reads this even if an adapter is provided, 
         // and if it points to a Prisma Cloud URL, it triggers the circuit breaker.
+        // We also delete other common Vercel/Prisma variables to avoid confusion.
         process.env.DATABASE_URL = sanitizedString;
+        delete process.env.PRISMA_DATABASE_URL;
+        delete process.env.POSTGRES_URL;
+        delete process.env.POSTGRES_PRISMA_URL;
+        delete process.env.POSTGRES_URL_NON_POOLING;
 
         console.log(`[Database] Connecting to ${sanitizedString.split('@')[1]?.split('?')[0] || 'remote host'}`);
 
