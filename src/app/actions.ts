@@ -8,118 +8,130 @@ import { getRotationType, getNextInRotation, getCategoryDescription } from "@/li
 import { runWithResilience } from "@/lib/ai";
 
 export async function getDashboardStats() {
-    const activeCropsCount = await prisma.crop.count({
-        where: { status: 'Planted' }
-    })
-
-    const pendingTasksCount = await prisma.task.count({
-        where: { status: 'Pending' }
-    })
-
-    const urgentTasksCount = await prisma.task.count({
-        where: {
-            status: 'Pending',
-            priority: 'High'
-        }
-    })
-
-    // Gasto mensual
-    const now = new Date();
-    const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
-
-    const monthlyExpenses = await prisma.expense.findMany({
-        where: {
-            date: {
-                gte: startOfMonth
-            }
-        }
-    })
-
-    const monthlySpending = monthlyExpenses.reduce((sum, exp) => sum + exp.amount, 0)
-
-    const weatherData = await getCurrentWeather();
-
-    // Farm Health Score (0-100)
-    const thirtyDaysAgo = new Date();
-    thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
-
-    const completedTasks = await prisma.task.count({ where: { status: 'Done', dueDate: { gte: thirtyDaysAgo } } })
-    const totalTasks = await prisma.task.count({ where: { dueDate: { gte: thirtyDaysAgo } } })
-
-    const taskScore = totalTasks > 0 ? (completedTasks / totalTasks) * 50 : 50;
-
-    const recentLogs = await prisma.cropLog.findMany({ take: 10, orderBy: { createdAt: 'desc' } })
-    const healthValues = recentLogs.map(l => {
-        if (l.aiAnalysis?.includes('Bueno')) return 50;
-        if (l.aiAnalysis?.includes('Regular')) return 25;
-        if (l.aiAnalysis?.includes('Malo')) return 10;
-        return 30;
-    })
-    const healthScore = healthValues.length > 0 ? (healthValues.reduce((a, b) => a + b, 0) / (healthValues.length * 50)) * 50 : 25;
-
-    const farmHealthScore = Math.round(taskScore + healthScore);
-
-    // IA Advice (Optional - wrapped in try/catch to prevent startup hang)
-    let aiAdvice = "";
     try {
-        const activeCrops = await prisma.crop.findMany({ where: { status: 'Planted' }, take: 5 })
-        const pendingTasks = await prisma.task.findMany({ where: { status: 'Pending' }, take: 5 })
-
-        aiAdvice = await getAiDailyAdvice({
-            weather: weatherData,
-            activeCrops,
-            pendingTasks,
-            monthlySpending
+        const activeCropsCount = await prisma.crop.count({
+            where: { status: 'Planted' }
         })
-    } catch (e) {
-        console.error("Dashboard AI Advice failed:", e);
-        aiAdvice = "No se pudo obtener el consejo de la IA en este momento.";
-    }
 
-    // Lunar Info
-    const lunarInfo = getLunarInfo();
+        const pendingTasksCount = await prisma.task.count({
+            where: { status: 'Pending' }
+        })
 
-    // Resource Alerts
-    let resourceAlerts: any[] = [];
-    try {
-        const allResources = await (prisma as any).resource.findMany();
-        resourceAlerts = allResources.filter((r: any) => r.quantity <= r.minStock);
-    } catch (e) {
-        console.error("Failed to fetch resources for stats:", e);
-    }
+        const urgentTasksCount = await prisma.task.count({
+            where: {
+                status: 'Pending',
+                priority: 'High'
+            }
+        })
 
-    // Agronomic Alerts (v1.8)
-    let agronomicAlerts: any[] = [];
-    try {
-        agronomicAlerts = recentLogs
-            .filter(l => l.aiAnalysis?.includes('💡'))
-            .map(l => {
-                const tips = l.aiAnalysis?.split('💡 Consejos Agronómicos: ')[1]?.split('\n')[0] || '';
-                return {
-                    cropId: l.cropId,
-                    tips: tips.split('. ').filter(t => t.length > 5).slice(0, 2)
+        // Gasto mensual
+        const now = new Date();
+        const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+
+        const monthlyExpenses = await prisma.expense.findMany({
+            where: {
+                date: {
+                    gte: startOfMonth
                 }
-            })
-            .filter(a => a.tips.length > 0)
-            .slice(0, 3);
-    } catch (e) {
-        console.error("Failed to parse agronomic alerts:", e);
-    }
+            }
+        })
 
-} catch (e: any) {
-    console.error("CRITICAL: getDashboardStats failed:", e.message);
-    return {
-        activeCrops: 0,
-        pendingTasks: 0,
-        urgentTasks: 0,
-        monthlySpending: 0,
-        aiAdvice: "Sistema en mantenimiento temporal. Verifica tu conexión a la base de datos.",
-        farmHealthScore: 0,
-        lunarInfo: { phase: "Unknown", visibility: 0, advice: "Cargando..." },
-        resourceAlerts: [],
-        agronomicAlerts: []
+        const monthlySpending = monthlyExpenses.reduce((sum, exp) => sum + exp.amount, 0)
+
+        const weatherData = await getCurrentWeather();
+
+        // Farm Health Score (0-100)
+        const thirtyDaysAgo = new Date();
+        thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+
+        const completedTasks = await prisma.task.count({ where: { status: 'Done', dueDate: { gte: thirtyDaysAgo } } })
+        const totalTasks = await prisma.task.count({ where: { dueDate: { gte: thirtyDaysAgo } } })
+
+        const taskScore = totalTasks > 0 ? (completedTasks / totalTasks) * 50 : 50;
+
+        const recentLogs = await prisma.cropLog.findMany({ take: 10, orderBy: { createdAt: 'desc' } })
+        const healthValues = recentLogs.map(l => {
+            if (l.aiAnalysis?.includes('Bueno')) return 50;
+            if (l.aiAnalysis?.includes('Regular')) return 25;
+            if (l.aiAnalysis?.includes('Malo')) return 10;
+            return 30;
+        })
+        const healthScore = healthValues.length > 0 ? (healthValues.reduce((a, b) => a + b, 0) / (healthValues.length * 50)) * 50 : 25;
+
+        const farmHealthScore = Math.round(taskScore + healthScore);
+
+        // IA Advice (Optional - wrapped in try/catch to prevent startup hang)
+        let aiAdvice = "";
+        try {
+            const activeCrops = await prisma.crop.findMany({ where: { status: 'Planted' }, take: 5 })
+            const pendingTasks = await prisma.task.findMany({ where: { status: 'Pending' }, take: 5 })
+
+            aiAdvice = await getAiDailyAdvice({
+                weather: weatherData,
+                activeCrops,
+                pendingTasks,
+                monthlySpending
+            })
+        } catch (e) {
+            console.error("Dashboard AI Advice failed:", e);
+            aiAdvice = "No se pudo obtener el consejo de la IA en este momento.";
+        }
+
+        // Lunar Info
+        const lunarInfo = getLunarInfo();
+
+        // Resource Alerts
+        let resourceAlerts: any[] = [];
+        try {
+            const allResources = await (prisma as any).resource.findMany();
+            resourceAlerts = allResources.filter((r: any) => r.quantity <= r.minStock);
+        } catch (e) {
+            console.error("Failed to fetch resources for stats:", e);
+        }
+
+        // Agronomic Alerts (v1.8)
+        let agronomicAlerts: any[] = [];
+        try {
+            agronomicAlerts = recentLogs
+                .filter(l => l.aiAnalysis?.includes('💡'))
+                .map(l => {
+                    const tips = l.aiAnalysis?.split('💡 Consejos Agronómicos: ')[1]?.split('\n')[0] || '';
+                    return {
+                        cropId: l.cropId,
+                        tips: tips.split('. ').filter(t => t.length > 5).slice(0, 2)
+                    }
+                })
+                .filter(a => a.tips.length > 0)
+                .slice(0, 3);
+        } catch (e) {
+            console.error("Failed to parse agronomic alerts:", e);
+        }
+
+        return {
+            activeCrops: activeCropsCount,
+            pendingTasks: pendingTasksCount,
+            urgentTasks: urgentTasksCount,
+            monthlySpending,
+            aiAdvice,
+            farmHealthScore,
+            lunarInfo,
+            resourceAlerts: resourceAlerts.map((r: any) => ({ name: r.name, quantity: r.quantity, unit: r.unit })),
+            agronomicAlerts
+        }
+    } catch (e: any) {
+        console.error("CRITICAL: getDashboardStats failed:", e.message);
+        return {
+            activeCrops: 0,
+            pendingTasks: 0,
+            urgentTasks: 0,
+            monthlySpending: 0,
+            aiAdvice: "Sistema en mantenimiento temporal. Verifica tu conexión a la base de datos.",
+            farmHealthScore: 0,
+            lunarInfo: { phase: "Unknown", visibility: 0, advice: "Cargando..." },
+            resourceAlerts: [],
+            agronomicAlerts: []
+        }
     }
-}
 }
 
 export async function getUrgentTasks() {
