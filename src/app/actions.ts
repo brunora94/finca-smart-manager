@@ -135,18 +135,23 @@ export async function getDashboardStats() {
 }
 
 export async function getUrgentTasks() {
-    return await prisma.task.findMany({
-        where: {
-            status: 'Pending',
-            // Prioridad alta o vencidas hoy/antes
-            OR: [
-                { priority: 'High' },
-                { dueDate: { lte: new Date() } }
-            ]
-        },
-        take: 5,
-        orderBy: { dueDate: 'asc' }
-    })
+    try {
+        return await prisma.task.findMany({
+            where: {
+                status: 'Pending',
+                // Prioridad alta o vencidas hoy/antes
+                OR: [
+                    { priority: 'High' },
+                    { dueDate: { lte: new Date() } }
+                ]
+            },
+            take: 5,
+            orderBy: { dueDate: 'asc' }
+        })
+    } catch (e) {
+        console.error("Failed to fetch urgent tasks:", e);
+        return [];
+    }
 }
 
 import { analyzeCropImage, translateToEnglish, translateToSpanish, analyzeCropNote } from '@/lib/ai'
@@ -239,11 +244,16 @@ export async function createJournalEntry(formData: FormData) {
 }
 
 export async function getRecentLogs() {
-    return await prisma.cropLog.findMany({
-        take: 5,
-        orderBy: { date: 'desc' },
-        include: { crop: true }
-    })
+    try {
+        return await prisma.cropLog.findMany({
+            take: 5,
+            orderBy: { createdAt: 'desc' }, // Changed to createdAt for more consistent activity feed
+            include: { crop: true }
+        })
+    } catch (e) {
+        console.error("Failed to fetch recent logs:", e);
+        return [];
+    }
 }
 
 export async function getAllLogs() {
