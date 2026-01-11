@@ -8,8 +8,10 @@ export default defineConfig({
         seed: "ts-node --compiler-options {\"module\":\"CommonJS\"} prisma/seed.ts",
     },
     datasource: {
-        // Works for Vercel Postgres, Supabase, Neon, etc.
-        url: process.env.DATABASE_URL,
-        // directUrl: process.env.DIRECT_URL, // Optional, only if needed for Supabase Transaction Pooler
+        url: process.env.supbase_POSTGRES_URL ||
+            process.env.supbase_POSTGRES_PRISMA_URL ||
+            process.env.SUPABASE_DATABASE_URL ||
+            process.env.DATABASE_URL ||
+            process.env.POSTGRES_PRISMA_URL,
     },
 });

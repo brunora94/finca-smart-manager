@@ -7,7 +7,6 @@ generator client {
 
 datasource db {
   provider = "postgresql"
-  url      = env("supbase_POSTGRES_URL") // Directly use the variable from your Supabase list
 }
 
 // Cultivos (Huerto)
