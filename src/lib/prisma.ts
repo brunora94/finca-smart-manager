@@ -60,22 +60,64 @@ const prismaClientSingleton = () => {
             if (m) manualPassword = decodeURIComponent(m[2]);
         }
 
-        // HOST SWAP STRATEGY: 
-        // If manual URL uses "db.supabase.co" (which fails DNS often) 
-        // AND system URL uses "pooler.supabase.com" (which works),
-        // we construct a hybrid URL with System Host + Manual Password.
-        if (systemUrl && sanitizedString.includes("db.") && systemUrl.includes("pooler.")) {
+        // NUCLEAR DNS FIX:
+        // The "db." hostname is confirmed broken for this project.
+        // We MUST rewrite it to a pooler, regardless of any other checks.
+        if (sanitizedString.includes("db.goqyxsyrrcgsknnctdny.supabase.co")) {
+            try {
+                // Default to EU Central 1 (Frankfurt)
+                const explicitHost = "aws-0-eu-central-1.pooler.supabase.com";
+                const tempUrl = new URL(sanitizedString);
+
+                console.log(`[Database] ⚠️ DETECTED BROKEN HOST: ${tempUrl.hostname}`);
+
+                // Rewrite to Pooler
+                tempUrl.hostname = explicitHost;
+                tempUrl.port = "6543";
+
+                // Fix User (pooler needs postgres.project_ref)
+                const projectRef = "goqyxsyrrcgsknnctdny";
+                if (tempUrl.username === "postgres") {
+                    tempUrl.username = `postgres.${projectRef}`;
+                }
+
+                sanitizedString = tempUrl.toString();
+                console.log(`[Database] 🔄 REDIRECTED TO: ${explicitHost} (User: ${tempUrl.username})`);
+            } catch (nuclearErr) {
+                console.error("[Database] Nuclear fix failed", nuclearErr);
+            }
+        }
+        else if (systemUrl && sanitizedString.includes("db.") && systemUrl.includes("pooler.")) {
+            // Standard Host Swap (still useful if vars return)
             try {
                 const sysUrlObj = new URL(systemUrl);
-
-                // Keep the system User (format: user.project) and Host
-                // Use Manual Password (format: healed)
-                sysUrlObj.password = encodeURIComponent(manualPassword); // Use NEW manual password
-
+                sysUrlObj.password = encodeURIComponent(manualPassword);
                 console.log(`[Database] Swapping broken 'db.' host for working pooler host: ${sysUrlObj.hostname}`);
                 sanitizedString = sysUrlObj.toString();
-            } catch (e) {
-                console.error("[Database] Host swap failed, falling back to manual URL");
+            } catch (swapErr) {
+                console.error("[Database] Host swap failed", swapErr);
+            }
+        }
+
+        // Region Fallback (Generic safety net)
+        else if (!systemUrl && sanitizedString.includes("db.")) {
+            try {
+                // Same logic but generic for other projects if reused
+                const explicitHost = "aws-0-eu-central-1.pooler.supabase.com";
+                const tempUrl = new URL(sanitizedString);
+                const matchRef = tempUrl.hostname.match(/^db\.(.*?)\.supabase\.co$/);
+                if (matchRef) {
+                    const projectRef = matchRef[1];
+                    tempUrl.hostname = explicitHost;
+                    tempUrl.port = "6543";
+                    if (tempUrl.username === 'postgres') {
+                        tempUrl.username = `postgres.${projectRef}`;
+                    }
+                    console.log(`[Database] DNS Fallback: Betting on ${explicitHost}`);
+                    sanitizedString = tempUrl.toString();
+                }
+            } catch (fallbackErr) {
+                console.error("[Database] Region fallback failed", fallbackErr);
             }
         }
 
