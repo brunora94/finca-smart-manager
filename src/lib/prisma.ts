@@ -44,6 +44,41 @@ const prismaClientSingleton = () => {
             }
         }
 
+        // Capture system variables before we delete them
+        const systemUrl = process.env.POSTGRES_URL || process.env.POSTGRES_PRISMA_URL;
+        let manualPassword = "";
+
+        // HEAL: Encode special characters
+        // ... (existing healing logic from lines 30-45 is assumed handled above, effectively)
+        // Actually, let's just grab the password from the sanitizedString we just made
+        try {
+            const tempUrl = new URL(sanitizedString);
+            manualPassword = decodeURIComponent(tempUrl.password);
+        } catch (e) {
+            // Fallback parse
+            const m = sanitizedString.match(/^(postgresql:\/\/.*?):(.*)@(.*)$/);
+            if (m) manualPassword = decodeURIComponent(m[2]);
+        }
+
+        // HOST SWAP STRATEGY: 
+        // If manual URL uses "db.supabase.co" (which fails DNS often) 
+        // AND system URL uses "pooler.supabase.com" (which works),
+        // we construct a hybrid URL with System Host + Manual Password.
+        if (systemUrl && sanitizedString.includes("db.") && systemUrl.includes("pooler.")) {
+            try {
+                const sysUrlObj = new URL(systemUrl);
+
+                // Keep the system User (format: user.project) and Host
+                // Use Manual Password (format: healed)
+                sysUrlObj.password = encodeURIComponent(manualPassword); // Use NEW manual password
+
+                console.log(`[Database] Swapping broken 'db.' host for working pooler host: ${sysUrlObj.hostname}`);
+                sanitizedString = sysUrlObj.toString();
+            } catch (e) {
+                console.error("[Database] Host swap failed, falling back to manual URL");
+            }
+        }
+
         // and if it points to a Prisma Cloud URL, it triggers the circuit breaker.
         // We also delete other common Vercel/Prisma variables to avoid confusion.
         process.env.DATABASE_URL = sanitizedString;
