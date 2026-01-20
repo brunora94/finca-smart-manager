@@ -65,8 +65,8 @@ const prismaClientSingleton = () => {
         // We MUST rewrite it to a pooler, regardless of any other checks.
         if (sanitizedString.includes("db.goqyxsyrrcgsknnctdny.supabase.co")) {
             try {
-                // Default to EU Central 1 (Frankfurt)
-                const explicitHost = "aws-0-eu-central-1.pooler.supabase.com";
+                // Default to US East 1 (N. Virginia) - The other most common region
+                const explicitHost = "aws-0-us-east-1.pooler.supabase.com";
                 const tempUrl = new URL(sanitizedString);
 
                 console.log(`[Database] ⚠️ DETECTED BROKEN HOST: ${tempUrl.hostname}`);
